@@ -1,0 +1,1 @@
+The plan is use http://developer.github.com/v3/repos/downloads/ to enable artifact deployment using Gradle.
