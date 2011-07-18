@@ -34,6 +34,18 @@ import org.apache.http.protocol.HttpContext
 import static groovyx.net.http.Method.*
 import static groovyx.net.http.ContentType.*
 
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpException;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.methods.multipart.ByteArrayPartSource;
+import org.apache.commons.httpclient.methods.multipart.FilePart;
+import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
+import org.apache.commons.httpclient.methods.multipart.Part;
+import org.apache.commons.httpclient.methods.multipart.StringPart;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+
+
 githubUser = 'curious-attempt-bunny'
 githubRepo = artifact
 
@@ -65,11 +77,27 @@ task sampleUpload << {
 		body = document
 	};
 	
-	http = new HTTPBuilder("https://github.s3.amazonaws.com")
+	def map = [key: upload.path,
+			acl: upload.acl,
+			success_action_status: 201,
+			Filename: upload.name,
+			AWSAccessKeyId: upload.accesskeyid,
+			Policy: upload.policy,
+			Signature: upload.signature,
+			'Content-Type': upload.mime_type,
+			file: file.text ]
 
-	http.request( POST, TEXT ) { req ->
+	/*
+	map.each { println "-F $it.key=$it.value \\" }
+
+	println map
+			
+	http = new HTTPBuilder("http://github.s3.amazonaws.com/") //upload.s3_url)
+
+	http.request( POST ) { req ->
 		uri.path = ''
-		send URLENC, [
+		requestContentType = URLENC
+		body = [
 			key: upload.path,
 			acl: upload.acl,
 			success_action_status: 201,
@@ -80,5 +108,20 @@ task sampleUpload << {
 			'Content-Type': upload.mime_type,
 			file: file.text
 		]
-    }
+		
+		response.failure = { resp ->
+			println "Failed with:"
+			println resp.entity.content.text
+		}
+    }*/
+    
+      PostMethod s3Post = new PostMethod(upload.s3_url);
+  Part[] parts = map.collect { new StringPart(it.key, it.value.toString()) } as Part[];
+  s3Post.setRequestEntity(
+      new MultipartRequestEntity(parts, s3Post.getParams())
+      );
+  HttpClient client = new HttpClient();
+  int status = client.executeMethod(s3Post);
+	println status  
+
 }
