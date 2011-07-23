@@ -5,7 +5,7 @@ apply plugin: 'githubDeployer'
 
 // used to generate ivy artifact descriptor
 group = githubUsername
-artifact = 'example'
+artifactId = 'example'
 version = '1.0'
 
 // repositories and dependencies required for the githubDeployer plugin

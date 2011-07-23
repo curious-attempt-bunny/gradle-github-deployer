@@ -38,7 +38,7 @@ buildscript {
 if (pluginBuilt) {
     uploadArchives {
         repositories {
-            githubDeployer userName: githubUsername, password: githubPassword
+            githubDeployer(userName: githubUsername, password: githubPassword)
         }
     }
 }
