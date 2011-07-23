@@ -1,0 +1,36 @@
+apply plugin: 'java'
+apply plugin: 'githubDeployer'
+
+// githubUsername and githubPassword can be defined in gradle.properties
+
+// used to generate ivy artifact descriptor
+group = githubUsername
+artifact = 'example'
+version = '1.0'
+
+// repositories and dependencies required for the githubDeployer plugin
+buildscript {
+	repositories {
+		mavenCentral()		
+		add(new org.apache.ivy.plugins.resolver.URLResolver()) {
+			name = 'GitHub'
+			addArtifactPattern 'http://cloud.github.com/downloads/[organisation]/[module]/[module]-[revision].[ext]'
+		}
+	}
+	
+	dependencies {
+		classpath 'curious-attempt-bunny:gradle-github-deployer:1.0-SNAPSHOT'
+	}
+}
+
+// the artifacts we'll upload
+artifacts {
+	archives jar
+}
+
+// deploy using the ivy github deployer
+uploadArchives {
+    repositories {
+        githubDeployer userName: githubUsername, password: githubPassword
+    }
+}

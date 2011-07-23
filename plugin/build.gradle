@@ -1,10 +1,9 @@
 apply plugin: 'groovy'
-apply plugin: 'eclipse'
-apply plugin: 'maven'
-
-group = 'com.curiousattemptbunny'
-artifact = 'gradle-github-deployer'
-version = '0.1-SNAPSHOT'
+apply plugin: 'idea'
+// dangerously obscure leverage of buildscript methods being evaluated first
+if (pluginBuilt) {
+    apply plugin: 'githubDeployer'
+}
 
 repositories {
 	mavenCentral()
@@ -12,6 +11,73 @@ repositories {
 
 dependencies {
 	groovy 'org.codehaus.groovy:groovy-all:1.8.0'
+    compile gradleApi()
+}
+
+buildscript {
+    // dangerously obscure leverage of buildscript methods being evaluated first
+    project.group = 'com.curiousattemptbunny'
+    project.artifactId = 'gradle-github-deployer'
+    project.version = '0.1-SNAPSHOT'
+
+    // snake eats tail
+    File libDir = new File(project.buildDir, "libs")
+    project.pluginBuilt = new File(libDir, "${artifactId}-${version}.jar").exists()
+    if (pluginBuilt) {
+        new File(libDir, "${artifactId}-hack-${version}.jar").write new File(libDir, "${artifactId}-${version}.jar").text
+        repositories {
+            flatDir(dirs: libDir)
+        }
+
+        dependencies {
+            classpath "${group}:${artifactId}-hack:${version}"
+        }
+    }
+}
+
+if (pluginBuilt) {
+    uploadArchives {
+        repositories {
+            githubDeployer userName: githubUsername, password: githubPassword
+        }
+    }
+}
+
+jar {
+    baseName = project.artifactId
+}
+
+/*
+import org.apache.ivy.plugins.resolver.DependencyResolver
+import org.apache.ivy.core.resolve.ResolvedModuleRevision
+import org.apache.ivy.core.module.descriptor.DependencyDescriptor
+import org.apache.ivy.core.resolve.ResolveData
+import org.apache.ivy.plugins.resolver.util.ResolvedResource
+import org.apache.ivy.core.report.DownloadReport
+import org.apache.ivy.core.module.descriptor.Artifact
+import org.apache.ivy.core.resolve.DownloadOptions
+import org.apache.ivy.core.report.ArtifactDownloadReport
+import org.apache.ivy.core.cache.ArtifactOrigin
+import org.apache.ivy.core.module.id.ModuleRevisionId
+import org.apache.ivy.core.search.OrganisationEntry
+import org.apache.ivy.core.search.ModuleEntry
+import org.apache.ivy.core.search.RevisionEntry
+import org.apache.ivy.plugins.namespace.Namespace
+import org.apache.ivy.plugins.resolver.ResolverSettings
+import org.apache.ivy.core.cache.RepositoryCacheManager
+import org.gradle.api.internal.artifacts.ivyservice.NoOpRepositoryCacheManager
+import org.apache.ivy.plugins.resolver.URLResolver
+
+class GitHubResolver extends URLResolver {
+    String getName() {
+        return "GitHubResolver"
+    }
+
+    void publish(Artifact artifact, File file, boolean overwrite) {
+        println artifact
+        println file
+        println overwrite
+    }
 }
 
 buildscript {
@@ -86,35 +152,7 @@ task sampleUpload << {
 			Signature: upload.signature,
 			'Content-Type': upload.mime_type,
 			file: file.text ]
-
-	/*
-	map.each { println "-F $it.key=$it.value \\" }
-
-	println map
-			
-	http = new HTTPBuilder("http://github.s3.amazonaws.com/") //upload.s3_url)
-
-	http.request( POST ) { req ->
-		uri.path = ''
-		requestContentType = URLENC
-		body = [
-			key: upload.path,
-			acl: upload.acl,
-			success_action_status: 201,
-			Filename: upload.name,
-			AWSAccessKeyId: upload.accesskeyid,
-			Policy: upload.policy,
-			Signature: upload.signature,
-			'Content-Type': upload.mime_type,
-			file: file.text
-		]
-		
-		response.failure = { resp ->
-			println "Failed with:"
-			println resp.entity.content.text
-		}
-    }*/
-    
+  
       PostMethod s3Post = new PostMethod(upload.s3_url);
   Part[] parts = map.collect { new StringPart(it.key, it.value.toString()) } as Part[];
   s3Post.setRequestEntity(
@@ -125,3 +163,5 @@ task sampleUpload << {
 	println status  
 
 }
+
+*/
