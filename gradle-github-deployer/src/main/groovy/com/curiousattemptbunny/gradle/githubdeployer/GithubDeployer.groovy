@@ -14,6 +14,11 @@ import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.entity.StringEntity
+import groovy.json.JsonSlurper
+import org.gradle.api.GradleException
+import org.apache.http.entity.mime.MultipartEntity
+import org.apache.http.entity.mime.content.StringBody
+import org.apache.http.entity.mime.content.FileBody
 
 class GithubDeployer extends URLResolver {
     public static final String NAME = "GitHub Deployer"
@@ -29,6 +34,8 @@ class GithubDeployer extends URLResolver {
         if (!userName || !password) {
             throw new IllegalStateException("Define GithubDeployer username and password in order to be able to deploy to GitHub")
         }
+
+        if (src.name.endsWith('jar')) return;
 
 //        println artifact.attributes
 
@@ -64,23 +71,42 @@ class GithubDeployer extends URLResolver {
 
         def response = client.execute(githubPost)
 
-        assert response?.statusLine?.statusCode / 100 == 2, "Incorrect userName, password? Don't own a GitHub repository called ${artifact.attributes.module}? Response for $githubUrl POST is: $response"
+        if ((int)(response?.statusLine?.statusCode / 100) != 2) {
+            throw new GradleException("Incorrect userName, password? Don't own a GitHub repository called ${artifact.attributes.module}? Response for $githubUrl POST is: $response")
+        }
 
-//        def path = "/repos/$githubUser/$githubRepo/downloads"
-//
-//        def upload = http.request( POST, JSON ) {
-//            uri.path = path
-//            body = document
-//        };
-//
-//        PostMethod s3Post = new PostMethod(upload.s3_url);
-//        Part[] parts = map.collect { new StringPart(it.key, it.value.toString()) } as Part[];
-//        s3Post.setRequestEntity(
-//            new MultipartRequestEntity(parts, s3Post.getParams())
-//            );
-//        int status = client.executeMethod(s3Post);
-//        println status
+        def upload = new JsonSlurper().parseText(response.entity.content.text)
 
+        println upload.collect { it }.join('\n')
+
+        def map = [key: upload.path,
+                acl: upload.acl,
+                success_action_status: 201,
+                Filename: upload.name,
+                AWSAccessKeyId: upload.accesskeyid,
+                Policy: upload.policy,
+                Signature: upload.signature,
+                'Content-Type': upload.mime_type
+                , file: src.text
+                ]
+
+        HttpPost s3Post = new HttpPost(upload.s3_url)
+
+        MultipartEntity reqEntity = new MultipartEntity()
+        map.each { key, value ->
+            reqEntity.addPart(key, new StringBody(value as String))
+        }
+//        reqEntity.addPart("file", new FileBody(src))
+
+        s3Post.entity = reqEntity
+
+        response = client.execute(s3Post)
+
+        if (response?.statusLine?.statusCode != 201) {
+            throw new GradleException("Failed to upload GitHub artifact. Response for $upload.s3_url POST is: $response. Body is ${response?.entity?.content?.text}")
+        }
+
+        println "Success!!"
     }
 
 

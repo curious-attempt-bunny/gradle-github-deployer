@@ -1,0 +1,44 @@
+apply plugin: 'groovy'
+apply plugin: 'githubDeployer'
+
+group = 'curious-attempt-bunny'
+artifactId = 'gradle-github-deployer'
+version = '0.1-SNAPSHOT'
+
+buildscript {
+	repositories {
+		mavenCentral()
+		flatDir name: 'localRepository', dirs: 'lib'
+		localRepository {
+            // TODO add Ivy Pattern
+			addArtifactPattern(file('local-repo').absolutePath + '/[artifact]-[revision].[ext]')
+		}
+	}
+
+	dependencies {
+		classpath "curious-attempt-bunny:gradle-github-deployer:0.1-SNAPSHOT"
+
+        // TODO fix this:
+        classpath 'org.apache.httpcomponents:httpclient:4.1.1'
+        classpath 'org.apache.httpcomponents:httpmime:4.1.1'
+        classpath 'org.codehaus.groovy:groovy-all:1.8.0'
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	groovy 'org.codehaus.groovy:groovy-all:1.8.0'
+	compile gradleApi()
+
+	compile 'org.apache.httpcomponents:httpclient:4.1.1'
+    compile 'org.apache.httpcomponents:httpmime:4.1.1'
+}
+
+uploadArchives {
+	repositories {
+		githubDeployer(userName: githubUsername, password: githubPassword)
+	}
+}
