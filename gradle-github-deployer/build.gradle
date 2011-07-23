@@ -1,19 +1,34 @@
 apply plugin: 'groovy'
 apply plugin: 'idea'
+
+group = 'curious-attempt-bunny'
+artifactId = 'gradle-github-deployer'
+version = '0.1-SNAPSHOT'
+
 // dangerously obscure leverage of buildscript methods being evaluated first
-if (pluginBuilt) {
-    apply plugin: 'githubDeployer'
-}
+//if (pluginBuilt) {
+//    apply plugin: 'githubDeployer'
+//}
 
 repositories {
 	mavenCentral()
+    flatDir name: 'localRepo', dirs: ['local-repo']
 }
 
 dependencies {
 	groovy 'org.codehaus.groovy:groovy-all:1.8.0'
     compile gradleApi()
+
+    compile 'org.apache.httpcomponents:httpclient:4.1.1'
 }
 
+uploadArchives {
+    repositories {
+        add project.repositories.localRepo
+    }
+}
+
+/*
 buildscript {
     // dangerously obscure leverage of buildscript methods being evaluated first
     project.group = 'com.curiousattemptbunny'
@@ -31,6 +46,9 @@ buildscript {
 
         dependencies {
             classpath "${group}:${artifactId}-hack:${version}"
+
+            // humph
+            classpath 'org.apache.httpcomponents:httpclient:4.1.1'
         }
     }
 }
